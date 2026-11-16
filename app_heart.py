@@ -1,6 +1,8 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 import pickle
+import datetime
 with open('heart_model.pkl','rb') as file:
     loaded_model = pickle.load(file)
 st.set_page_config(page_title ="Heart Disease Detector", page_icon ="heart", layout = "centered")
@@ -17,6 +19,7 @@ st.markdown("""
 st.title("Heart disease prediction app")
 st.write("Please enter below medical details of patients")
 st.markdown("---")
+patient_name = st.text_input("Name of the patient:",value ="Rahul Sharma")
 col1,col2 = st.columns(2)
 with col1:
     age = st.number_input("Age:", min_value = 1 , max_value = 120 , value = 45)
@@ -40,7 +43,39 @@ st.markdown("---")
 if st.button("Check health(Predict Status)"):
     input_data = np.array([[age,sex,cp,trestbps,chol,fbs,restecg,thalach,exang,oldpeak,slope,ca,thal]])
     prediction = loaded_model.predict(input_data)
-    if prediction == 1:
+    if prediction[0] == 1:
+        result_text = "High Probablity of Heart Disease(consult a Doctor)"
         st.error("Warning: According to model probablity of patient has heart diseas. please  consult to doctor")
     else:
+        result_text = "Normal Status (Heart looks safe)"
         st.success("Good news: According to model hear is safe. patient is normal")
+    st.markdown("----")
+    st.subheader("Health Vitals Comparison (Patient Vs Normal Limit)")
+    chart_data = pd.DataFrame({
+        "Patient Value": [trestbps, chol, thalach],
+        "Normal Reference": [120,200,150]
+    }, index = ["Blood Pressure","Cholesterol","Max Heart Rate"])
+    st.bar_chart(chart_data)
+    current_date = datetime.date.today()
+    report_content = f"""=========HEART HEALTH SCREENING REPORT==========
+Date: {current_date}
+Patient Name: {patient_name}
+Age / Sex: {age} yrs / {sex_label}
+------CLINICAL PARAMETERS--------
+Resting Blood Pressure : {trestbps}
+Cholesterol Level       : {chol} mg/dl
+Max Heart Rate          : {thalach} bpm
+Fasting Blood Sugar     : {fbs_label}
+Chest Pain Type         : {cp}
+Exercise Angina         : {exang_label}
+-------AI MODEL PREDICTION---------
+Status: {result_text}
+Note: This is an AI -generated screening report for educational purposes.
+Please consult a certified cardiologist for medical advice.
+======================================================================"""
+    st.download_button(
+        label = "Download Patient Report(.txt)",
+        data = report_content,
+        file_name = f"{patient_name.replace(' ','_')}_Heart_Report.txt",
+        mime = "text / plain"
+    )
